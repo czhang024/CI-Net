@@ -6,7 +6,7 @@ import torch.optim as optim
 
 
 from math import sqrt
-from tqdm.notebook import tqdm, trange
+from tqdm.notebook import trange
 from utils.reconstructed import loss_inverting_gt
 from utils.nb_utils import calculate_iqa
 
@@ -146,39 +146,40 @@ class CI_attacker():
         image_recon = []
 
         # Start the reconstrcution attack
-        with trange(num_epochs,disable=True) as t:
-            for iters in (t):
-                print("Iteration {}".format(iters))                  
-                optimizerG.zero_grad()
+        # with trange(num_epochs,disable=True) as t:
+            # for iters in (t):
+        for iters in trange(num_epochs, desc="Processing"):
+            # print("Iteration {}".format(iters))                  
+            optimizerG.zero_grad()
 
-                fake  = self.netG(self.noise).to(self.config['device'])
-                #Passing the fake input to the global model
-                fake_output = model(fake)
-                criterion = nn.CrossEntropyLoss().to(device)
-                #Calculating the dummy gradient
-                dummy_loss = criterion(fake_output,original_label)
-                fake_dy_dx = torch.autograd.grad(dummy_loss, model.parameters(), create_graph=True)
-                #Calculating the loss between the original gradients and dummy gradients
-                errG = loss_inverting_gt(original_gt,fake_dy_dx,fake,tv_value)
-                errG.backward()
-                
-                # Changing the value of gradient to sign only. 
-                if self.config['signed']:
-                    for layer in self.netG.parameters():
-                        layer.grad.sign_()
-                # Update G
-                optimizerG.step()
-                # Save Losses for plotting later
-                G_losses.append(errG.item())
-                # Save the reconstructed image on each to variable "image_recon"
-                fake = fake.detach().cpu()
-        
-                if (iters+1)%rep_freq==0 :
-                    image_recon.append(fake)
-                iters += 1
-                t.set_postfix(gt_loss = errG.item()) # for monitoring only 
-                if lr_decay:
-                    scheduler.step()
+            fake  = self.netG(self.noise).to(self.config['device'])
+            #Passing the fake input to the global model
+            fake_output = model(fake)
+            criterion = nn.CrossEntropyLoss().to(device)
+            #Calculating the dummy gradient
+            dummy_loss = criterion(fake_output,original_label)
+            fake_dy_dx = torch.autograd.grad(dummy_loss, model.parameters(), create_graph=True)
+            #Calculating the loss between the original gradients and dummy gradients
+            errG = loss_inverting_gt(original_gt,fake_dy_dx,fake,tv_value)
+            errG.backward()
+            
+            # Changing the value of gradient to sign only. 
+            if self.config['signed']:
+                for layer in self.netG.parameters():
+                    layer.grad.sign_()
+            # Update G
+            optimizerG.step()
+            # Save Losses for plotting later
+            G_losses.append(errG.item())
+            # Save the reconstructed image on each to variable "image_recon"
+            fake = fake.detach().cpu()
+    
+            if (iters+1)%rep_freq==0 :
+                image_recon.append(fake)
+            iters += 1
+            # t.set_postfix(gt_loss = errG.item()) # for monitoring only 
+            if lr_decay:
+                scheduler.step()
 
         return image_recon
 

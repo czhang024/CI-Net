@@ -26,4 +26,7 @@ This is a PyTorch implementation of the paper [Generative Gradient Inversion via
   pages={5126--5135},
   year={2023}
 }
+```
 
+### License
+This project is under the MIT license. See [License](LICENSE.md) for details.
